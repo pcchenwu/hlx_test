@@ -17,7 +17,7 @@
 
 using namespace std;
 
-static bool isUpdated = false;
+static int *shmadd;
 
 void kill_child(int sig){
     cout<<"[childB] Child process exits\n";
@@ -25,7 +25,31 @@ void kill_child(int sig){
 }
 
 void data_updated(int sig){
-    isUpdated = true;
+    int len;
+    memcpy(&len, shmadd, sizeof(int));
+    int array[len];
+    memcpy(array,shmadd+1,len*sizeof(int));
+    
+    cout<<"[childB] Random Numbers Received From Shared Memory:";
+    for(int i=0; i< len; i++){
+        cout<<array[i]<<" ";
+    }
+    cout<<endl;
+    
+    sort(array, array+len);
+    
+    cout<<"[childB] Sorted Sequence:";
+    for(int i=0; i< len; i++){
+        cout<<array[i]<<" ";
+    }
+    cout<<endl;
+    
+    double x=1;
+    for(int i=0; i< len; i++){
+        x *= array[i];
+    }
+    x = pow(x,(1.0/len));
+    cout<<"[childB] Geometric Mean:"<<x<<endl;
 }
 
 int main(int argc, const char * argv[]) {
@@ -37,7 +61,6 @@ int main(int argc, const char * argv[]) {
     // shared memory
     int shmid;
     key_t key;
-    int *shmadd;
     
     key = ftok(".",5566);
     if(key == -1){
@@ -58,35 +81,6 @@ int main(int argc, const char * argv[]) {
     
     while(1){
         usleep(5000000);
-        
-        if(isUpdated){
-            int len;
-            memcpy(&len, shmadd, sizeof(int));
-            int array[len];
-            memcpy(array,shmadd+1,len*sizeof(int));
-
-            cout<<"[childB] Random Numbers Received From Shared Memory:";
-            for(int i=0; i< len; i++){
-                cout<<array[i]<<" ";
-            }
-            cout<<endl;
-    
-            sort(array, array+len);
-        
-            cout<<"[childB] Sorted Sequence:";
-            for(int i=0; i< len; i++){
-                cout<<array[i]<<" ";
-            }
-            cout<<endl;
-        
-            double x=1;
-            for(int i=0; i< len; i++){
-                x *= array[i];
-            }
-            x = pow(x,(1.0/len));
-            cout<<"[childB] Geometric Mean:"<<x<<endl;
-            isUpdated = false;
-        }
     }
 
    return 0;
