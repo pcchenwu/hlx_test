@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/msg.h>
+#include <sys/shm.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -10,16 +11,24 @@
 
 #include <iostream>
 #include <sstream>
+#include <vector>
 using namespace std;
 
-void genInt(int num){
+#define BUFSIZE 2048
+
+vector<int> genInt(int num){
     unsigned seed;
     seed = (unsigned)time(NULL); // 取得時間序列
     srand(seed); // 以時間序列當亂數種子
-    for(int i=0; i<num; i++)
-        cout << rand()%51+50 <<" ";
+    vector<int> ret_vec(num);
     
+    cout<<"[mainParent] Generating "<<num<<" random integers:";
+    for(int i=0; i<num; i++){
+        ret_vec[i] = rand()%51+50 ;
+        cout << ret_vec[i] <<" ";
+    }
     cout<<endl;
+    return ret_vec;
 }
 
 int main(int argc, const char * argv[]) {
@@ -49,6 +58,29 @@ int main(int argc, const char * argv[]) {
     cout<<"[mainParent] childA Process Created\n";
     cout<<"[mainParent] childB Process Created\n";
     
+    // shared memory setting
+    int shmid;
+    key_t key;
+    int *shmadd;
+    
+    key = ftok(".",5566);
+    if(key == -1){
+        perror("ftok");
+    }
+    
+    shmid = shmget(key, BUFSIZE, SHM_R|SHM_W|IPC_CREAT);
+    if(shmid < 0){
+        perror("shmget");
+        exit(-1);
+    }
+    
+    shmadd = (int*)shmat(shmid, NULL, 0);
+    if(shmadd < 0){
+        perror("shmat");
+        exit(-1);
+    }
+    
+    
     // User Input
     string input = "";
     int myNumber=0;
@@ -63,7 +95,13 @@ int main(int argc, const char * argv[]) {
             if(myNumber == 0){
                 break;
             }
-            genInt(myNumber);
+            vector<int> rand_nums(myNumber);
+            rand_nums = genInt(myNumber);
+            
+            memset(shmadd, 0, BUFSIZE);
+            memcpy(shmadd, &myNumber, sizeof(int));
+            memcpy(shmadd+1, rand_nums.data(), myNumber*sizeof(int));
+            kill(cpid_b, SIGUSR1);
         }
         else
             cout << "[mainParent] Invalid number, please try again" << endl;
