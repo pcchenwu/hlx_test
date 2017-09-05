@@ -29,6 +29,6 @@ int main(int argc, const char * argv[]) {
        usleep(10000000);
        cout<<"ChildA wake up\n";
     }
-    std::cout << "[childA] Child process exits\n";
+
     return 0;
 }

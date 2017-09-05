@@ -24,33 +24,36 @@ void genInt(int num){
 
 int main(int argc, const char * argv[]) {
   
-    cout<<"fork?\n";
+    cout<<"[mainParent] Main Process Started\n";
+
+    // fork create childA&B
     pid_t cpid_a, cpid_b, rpid_a, rpid_b;
-    
+  
     cpid_a = fork();
-    cout<<"cpid_a:"<<cpid_a<<endl;
     
     if(cpid_a < 0) {
-        cout << "Fork failed." << '\n';
+        cout << "[mainParent] Fork failed.\n";
         return 1;
     }
     else if(cpid_a == 0) { // code for child process A
-        cout<<"in a\n";
-        if(execl("/Users/pcchenwu/Desktop/develop/hlx/childA", NULL, NULL)<0)
+        if(execl("childA", NULL, NULL)<0)
             perror("Err on execlp");
     }
     else { // code for parent process
-        cout<<"ready for b\n";
         cpid_b = fork();
-        if(cpid_b == 0)
-            if(execl("/Users/pcchenwu/Desktop/develop/hlx/childB", NULL, NULL)<0)
+        if(cpid_b == 0) //code for child process B
+            if(execl("childB", NULL, NULL)<0)
                 perror("Err on execlp");
-//        while(wait(NULL) != -1);
     }
     
+    cout<<"[mainParent] childA Process Created\n";
+    cout<<"[mainParent] childB Process Created\n";
+    
+    // User Input
     string input = "";
     int myNumber=0;
     while (true) {
+        usleep(500000);
         cout << "[mainParent] Enter a positive interger or 0 to exit: ";
         getline(cin, input);
         
@@ -63,48 +66,29 @@ int main(int argc, const char * argv[]) {
             genInt(myNumber);
         }
         else
-            cout << "Invalid number, please try again" << endl;
+            cout << "[mainParent] Invalid number, please try again" << endl;
     }
 
-    int status, ret;
+    // kill and wait
+    int status_a,status_b, ret;
     kill(cpid_a, SIGTERM);
     kill(cpid_b, SIGTERM);
     
-    
-    do{
-        
-//        rpid_a = waitpid(cpid_a,&status, WNOHANG);
-        rpid_a = waitpid(cpid_a,&status, WEXITED);
-        /*使用了WNOHANG参數，waitpid不會在這裏等待 */
-        
-        if(rpid_a==0){
-            
-            /*如果沒有收集到子進程 */
-            
-            printf("Nochild exited\n");
-            
-            sleep(1);
-            
+    cout<<"[mainParent] Process Waits\n";
+
+    waitpid(cpid_a, &status_a, 0);
+    waitpid(cpid_b, &status_b, 0);
+    if (status_a > 0 || status_b > 0){
+        string s;
+        if(status_a){
+            s.append(" childA ");
         }
-        
-    }        while(rpid_a==0);
-    
-    /*沒有收集到子進程，就回去繼續嘗試 */
-    
-    if(cpid_a==rpid_a)
-        printf("successfullyget child %d\n", cpid_a);
-    else
-        printf("someerror occured\n");
-    
-    if(WIFEXITED(status))
-    {
-        ret = WEXITSTATUS(status);
+        if(status_b){
+            s.append(" childB ");
+        }
+        cout<<"[mainParent] The child process "<<s<<" terminated with an error!\n";
     }
-    else if(WIFSIGNALED(status))
-    {
-        ret = WTERMSIG(status);
-    }
-//    wait(&cpid_b);
+    
     cout<<"[mainParent] Process Exits\n";
     return 0;
 }
