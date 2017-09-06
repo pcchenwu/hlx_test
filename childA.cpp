@@ -7,11 +7,14 @@
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <semaphore.h>
+
 
 #include <algorithm>
 #include <iostream>
 
 #define BUFSIZE 1024
+#define SEM_NAME "/semaphore"
 
 using namespace std;
 
@@ -23,7 +26,14 @@ void kill_child(int sig){
 int main(int argc, const char * argv[]) {
  
     std::cout << "[childA] Child process started\n";
-    signal(SIGTERM,(void (*)(int))kill_child);  
+    signal(SIGTERM,(void (*)(int))kill_child);
+    
+    // semaphore
+    sem_t *semaphore = sem_open(SEM_NAME, O_RDWR);
+    if (semaphore == SEM_FAILED) {
+        perror("sem_open(3) failed");
+        exit(EXIT_FAILURE);
+    }
 
     usleep(500000);
    while(1){
@@ -32,6 +42,12 @@ int main(int argc, const char * argv[]) {
        int len;
        // get pipe data
        nbytes =  read(0,buffer , sizeof(int)*BUFSIZE);
+       
+       if (sem_wait(semaphore) < 0) {
+           perror("sem_wait(3) failed on child");
+           continue;
+       }
+       
        len = buffer[0];
        cout<<"[childA] Random Numbers Received From Pipe:";
        for(int i=1; i<=len; i++){
@@ -51,7 +67,14 @@ int main(int argc, const char * argv[]) {
            mid = (buffer[(len/2)] + buffer[(len/2 + 1)]) / 2.0;
        }
        cout<<"[childA] Median: "<<mid<<endl;
+       
+       if (sem_post(semaphore) < 0) {
+           perror("sem_post(3) error on child");
+       }
     }
+    
+    if (sem_close(semaphore) < 0)
+        perror("sem_close(3) failed");
 
     return 0;
 }

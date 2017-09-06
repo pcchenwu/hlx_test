@@ -2,12 +2,14 @@
 #include <sys/stat.h>
 #include <sys/msg.h>
 #include <sys/shm.h>
+#include <sys/wait.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <semaphore.h>
 
 #include <iostream>
 #include <sstream>
@@ -15,6 +17,9 @@
 using namespace std;
 
 #define BUFSIZE 2048
+#define SEM_NAME "/semaphore"
+#define SEM_PERMS (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
+#define INITIAL_VALUE 1
 
 vector<int> genInt(int num){
     unsigned seed;
@@ -44,6 +49,21 @@ int main(int argc, const char * argv[]) {
     if(pipe(pfd) < 0){
         perror("pipe fail");
         return -1;
+    }
+    
+    // semaphore
+    sem_t *semaphore = sem_open(SEM_NAME, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
+    
+    if (semaphore == SEM_FAILED) {
+        perror("sem_open(3) error");
+        exit(EXIT_FAILURE);
+    }
+    
+    // Close the semaphore as we won't be using it in the parent process
+    if (sem_close(semaphore) < 0) {
+        perror("sem_close(3) failed");
+        sem_unlink(SEM_NAME);
+        exit(EXIT_FAILURE);
     }
     
     // fork create childA&B
@@ -148,6 +168,9 @@ int main(int argc, const char * argv[]) {
         }
         cout<<"[mainParent] The child process "<<s<<" terminated with an error!\n";
     }
+    
+    if (sem_unlink(SEM_NAME) < 0)
+        perror("sem_unlink(3) failed");
     
     cout<<"[mainParent] Process Exits\n";
     return 0;
