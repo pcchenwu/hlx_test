@@ -13,12 +13,15 @@
 #include <algorithm>
 #include <iostream>
 
-#define BUFSIZE 1024
-#define SEM_NAME "/semaphore"
+#define BUFSIZE 2048
+#define SEM_NAME "semaphore"
 
 using namespace std;
+static sem_t *semaphore;
 
 void kill_child(int sig){
+    if (sem_close(semaphore) < 0)
+        perror("sem_close(3) failed");
     cout<<"[childA] Child process exits\n";
     exit(EXIT_SUCCESS);
 }
@@ -29,7 +32,7 @@ int main(int argc, const char * argv[]) {
     signal(SIGTERM,(void (*)(int))kill_child);
     
     // semaphore
-    sem_t *semaphore = sem_open(SEM_NAME, O_RDWR);
+    semaphore = sem_open(SEM_NAME, O_RDWR);
     if (semaphore == SEM_FAILED) {
         perror("sem_open(3) failed");
         exit(EXIT_FAILURE);

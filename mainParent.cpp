@@ -17,7 +17,7 @@
 using namespace std;
 
 #define BUFSIZE 2048
-#define SEM_NAME "/semaphore"
+#define SEM_NAME "semaphore"
 #define SEM_PERMS (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
 #define INITIAL_VALUE 1
 
@@ -132,7 +132,11 @@ int main(int argc, const char * argv[]) {
         if (myStream >> myNumber){
             if(myNumber == 0){
                 break;
+            }else if(myNumber >= (BUFSIZE/sizeof(int))){
+                cout <<"[mainParent] Overlimit, please enter under "<<BUFSIZE/sizeof(int)<<endl;
+                continue;
             }
+            
             vector<int> rand_nums(myNumber);
             rand_nums = genInt(myNumber);
             

@@ -15,7 +15,7 @@
 #include <iostream>
 
 #define BUFSIZE 2048
-#define SEM_NAME "/semaphore"
+#define SEM_NAME "semaphore"
 
 using namespace std;
 
@@ -23,6 +23,9 @@ static int *shmadd;
 static sem_t *semaphore;
 
 void kill_child(int sig){
+    if (sem_close(semaphore) < 0)
+        perror("sem_close(3) failed");
+    
     cout<<"[childB] Child process exits\n";
     exit(EXIT_SUCCESS);
 }
